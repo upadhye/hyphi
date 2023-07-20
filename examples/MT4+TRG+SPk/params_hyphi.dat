@@ -1,0 +1,88 @@
+# hyphi parameter file generated on 2023-07-20 at 14:23
+
+# n_s
+0.966
+
+# sigma_8
+0.768247724
+
+# h
+0.6732
+
+# Omega_m
+.31600000000000000000
+
+# Omega_b
+.04939000000000000000
+
+# Omega_nu
+.00568573734635668046
+
+# T_cmb_K
+2.7255
+
+# w_0
+-1.0
+
+# w_a
+0.0
+
+
+# non-linearity
+1
+
+# 1-loop TRG
+1
+
+# print linear P
+0
+
+# print RSD
+0
+
+# initial z
+200
+
+# number of outputs
+1
+
+# redshifts of outputs
+0
+
+# transfer function file
+planckLargeNuFix_transfer_z0.dat
+
+# nu approx: only 0 supported
+0
+
+# transfer file root
+planckLargeNuFix_transfer_z
+
+# number of interpolation redshifts
+12
+
+# interpolation redshifts
+200 100 50 20 10 5 4 3 2 1 0.5 0
+
+
+# number of lensing potential power spectra
+3
+
+# P_m to use in lensing potential power integral
+3 3 3
+
+# SP(k) hydrodynamic suppression option
+0 1 2
+
+# z above which to use Time-RG PT for P_m
+2 2 2
+
+# min, max z for lensing potential power integ.
+0 0 0
+1100 1100 1100
+
+# SP(k) hydro suppression parameters (3 each)
+1 1 4.16
+1 1 1.20
+1 1 0.39
+

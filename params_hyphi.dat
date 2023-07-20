@@ -1,0 +1,135 @@
+# ==============================================================================
+# =================== Parameter file for Time-RG computation ===================
+# ==============================================================================
+# 
+# Lines beginning with a '#' are ignored by the code.  Parameters must be 
+# listed in the order below.
+#
+# -------------------------- cosmologial parameters ----------------------------
+#
+# n_s: scalar spectral index
+0.966
+
+# sigma_8: z=0 normalization of linear power spectrum
+0.768247724
+
+# h: Hubble parameter today, H_0 / (100 km/sec/Mpc)
+0.6732
+
+# Omega_m: total matter fraction today (cdm, baryons, massive nu)
+0.316
+
+# Omega_b: baryon fraction today
+0.04939
+
+# Omega_nu: massive neutrino fraction today (0 if massless)
+0.00568573734635668046
+
+# T_cmb_K: CMB temperature today, in units of Kelvins
+2.7255
+
+# w0: dark energy equation of state today
+-1.0
+
+# wa: derivative -dw/da in CPL parameterization
+0.0
+
+#
+# ----------------------------- code switches ----------------------------------
+#
+# nonlinear computation: 0 for linear, 1 for Time-RG perturbation theory
+1
+
+# 1-loop approximation to nonlinear computation (0 for full NL, 1 for 1-loop)
+1
+
+# print linear evolution information: D, f, P_lin for cb and nu
+0
+
+# print non-linear and RSD information: 
+# P_ab;   P_{B,j} {j=2,4,6};   and P_{T,j} {j=2,4,6,8}
+0
+
+#
+# -------------------------------- outputs -------------------------------------
+#
+# initial redshift
+200
+
+# number of redshifts at which to print results
+1
+
+# redshifts of outputs (arranged from greatest to least)
+0
+
+#
+# ---------------------------- transfer inputs ---------------------------------
+#
+# Transfer function at z=0, in CAMB standard format (7 columns:
+#   k[h/Mpc], delta_cdm/k^2, delta_b/k^2, delta_gamma/k^2, delta_massless/k^2, 
+#   delta_massive/k^2, delta_tot/k^2
+# where massive and massless refer to neutrinos
+planckLargeNuFix_transfer_z0.dat
+
+# Massive neutrino approx: 0 for CAMB interpolation, which is the only method
+0
+
+# If using CAMB interpolation, provide the transfer filename root, the number 
+# of redshifts, and the list of redshifts from greatest to least.  A transfer 
+# file for a given redshift must be named {transfer root}{redshift}.dat.  For 
+# example, the transfer file corresponding to a transfer root of 
+# camb_transfer_z and a redshift of 3 is camb_transfer_z3.dat. 
+# transfer root:
+planckLargeNuFix_transfer_z
+
+# Number of interpolation redshifts:
+12
+
+# List of redshifts, from greatest to least, separated by whitespace.  These
+# should span the range z_initial <= z <= 0.
+200 100 50 20 10 5 4 3 2 1 0.5 0
+
+#
+# ------------------ lensing potential power parameters ------------------------
+#
+# Number of lensing potential power spectra to compute
+1
+
+# matter power to use in lensing potential power computation:
+# 0 for linear perturbation theory
+# 1 for Time-RG perturbation theory
+# 2 for Time-RG for z > z_trg and Halofit for lower z
+# 3 for Time-RG for z > z_trg and Mira-Titan IV emulator for lower z
+3
+
+# Type of hydrodynamic suppression factor SP(k) accounting for baryonic feedback
+# 0 for no hydrodynamic suppression
+# 1 for BAHAMAS baryon fraction raised to power p_f
+# 2 for 3-parameter SP(k) model
+2
+
+# Redshifts z_trg below which to use Halofit/Mira-Titan for non-linear power
+# (Set these to <=0 in order to use Time-RG at all redshifts.)
+2
+
+# Minimum redshifts over which to integrate lensing potential power
+0
+
+# Maximum redshifts over which to integrate lensing potential power
+3
+
+# Parameters for the hydrodynamic suppression factor.
+# Provide three parameters for each lensing potential power spectrum.
+# For hydrodynamic suppression type 0 above (no suppression), these are not
+# used, and can take any value.  For type 1, only the first is used, for the
+# exponent p_f, and for type 2, all are used, for alpha_f, beta_f, and gamma_f.
+# 
+# Parameter 0
+4.16
+
+# Parameter 1
+1.20
+
+# Parameter 2
+0.39
+

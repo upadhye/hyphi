@@ -1,0 +1,239 @@
+#!/bin/bash
+##
+##    Copyright 2023 Amol Upadhye
+##
+##    This file is part of hyphi.
+##
+##    hyphi is free software: you can redistribute
+##    it and/or modify it under the terms of the GNU General
+##    Public License as published by the Free Software
+##    Foundation, either version 3 of the License, or (at
+##    your option) any later version.
+##
+##    hyphi is distributed in the hope that it
+##    will be useful, but WITHOUT ANY WARRANTY; without
+##    even the implied warranty of MERCHANTABILITY or
+##    FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+##    Public License for more details.
+##
+##    You should have received a copy of the GNU General
+##    Public License along with hyphi.  If not,
+##    see <http://www.gnu.org/licenses/>.
+##
+#####  This script runs camb and hyphi with
+#####  user-defined input parameters.
+##
+################################################################################
+#######################  Begin user-defined parameters  ########################
+################################################################################
+
+# directory containing camb and HighLExtrapTemplate_lenspotentialCls.dat
+USER_CAMB_EXEC=~/work/camb/camb-1.4.0/CAMB/fortran/
+
+# camb template file to use
+USER_CAMB_TEMPLATE_FILE=camb1_template_fast.ini
+
+#locations of Mira-Titan IV P_tot emulator and Euclid Emulator 2
+USER_MT4_DIR=~/work/emulators/mira-titan_iv/P_tot
+
+# model name
+USER_MODELNAME=planckLargeNuFix
+
+# Omega_{m,0} h^2
+USER_OMH2=0.14321064384
+
+# Omega_{b,0} h^2
+USER_OBH2=0.0223834610736
+
+# Omega_{nu,0} h^2
+USER_ONH2=0.002576766158471118
+
+# sigma_8
+USER_SIG8=0.768247724
+
+# reduced hubble parameter H_0 / (100 km/s/Mpc)
+USER_HRED=0.6732
+
+# scalar spectral index
+USER_NSCL=0.966
+
+# dark energy equation of state w(z) = w_0 + z w_a / (1+z)
+USER_DEW0=-1.0
+USER_DEWA=0.0
+
+# number of massive neutrinos (integer)
+USER_N_NU_MASSIVE=3
+
+# list of output redshifts from highest to lowest, passed as a string
+USER_HYPHI_ZLIST="0"
+
+# number of lensing potential power spectra to compute
+USER_NCLPP=1
+
+# non-linearity of hyphi: 
+# 0 linear; 1 Time-RG; 2 Halofit; 3 Mira-Titan IV
+# In the case of USER_NCLPP>1, provide values as a string, e.g. "1 3 3"
+USER_HYPHI_NL="1"
+
+# feedback switch: 0=none, 
+#                  1=pySP(k) with BAHAMAS baryon fraction, 
+#                  2=Akino fit as implemented in pySP(k) (3 parameters)
+# one switch for each of USER_NCLPP outputs
+USER_HYPHI_HYD="0"
+
+# perturbation theory transition: use PT above this redshift
+USER_HYPHI_ZPT="2"
+
+# minimum/maximum redshifts over which to integrate lensing potential power
+USER_HYPHI_ZMIN="0"
+USER_HYPHI_ZMAX="1100"
+
+# parameters for the hydrodynamic suppression factor
+USER_HYPHI_HYD_PFTB="4.16"
+USER_HYPHI_HYD_QFTB="1.20"
+USER_HYPHI_HYD_RFTB="0.39"
+
+################################################################################
+########################  End user-defined parameters  #########################
+################################################################################
+
+##### Derived parameters
+DER_H100=$(echo "100 * ${USER_HRED}" | bc -l)
+DER_OCH2=$(echo "${USER_OMH2} - ${USER_OBH2} - ${USER_ONH2}" | bc -l)
+DER_OM=$(echo "${USER_OMH2} / ${USER_HRED} / ${USER_HRED}" | bc -l)
+DER_OB=$(echo "${USER_OBH2} / ${USER_HRED} / ${USER_HRED}" | bc -l)
+DER_ON=$(echo "${USER_ONH2} / ${USER_HRED} / ${USER_HRED}" | bc -l)
+DER_N_NU_MASSLESS=$(echo "3.044 - ${USER_N_NU_MASSIVE}"|bc -l)
+DER_AS9_DEFAULT=2.0
+DER_HYPHI_NZ=$(echo ${USER_HYPHI_ZLIST} | wc -w)
+DER_TFILE_ROOT=${USER_MODELNAME}_transfer_z
+DER_TFILE=${DER_TFILE_ROOT}0.dat
+
+##### Symlink emulator if not already here
+if [ ! -f ./emu.exe ]; then
+  ln -s ${USER_MT4_DIR}/emu.exe .
+fi
+
+##### Create camb input ini file
+CAMB_INI_NAME=input_camb_${USER_MODELNAME}.ini
+cat ${USER_CAMB_TEMPLATE_FILE} \
+	| sed   -e s+CAMB_TEMPLATE_EXEC+${USER_CAMB_EXEC}+g \
+		-e s/CAMB_TEMPLATE_W0/${USER_DEW0}/g \
+                -e s/CAMB_TEMPLATE_WA/${USER_DEWA}/g \
+                -e s/CAMB_TEMPLATE_HUBBLE/${DER_H100}/g \
+                -e s/CAMB_TEMPLATE_OBH2/${USER_OBH2}/g \
+                -e s/CAMB_TEMPLATE_OCH2/${DER_OCH2}/g \
+                -e s/CAMB_TEMPLATE_ONH2/${USER_ONH2}/g \
+                -e s/CAMB_TEMPLATE_AS/${DER_AS9_DEFAULT}e-9/g \
+                -e s/CAMB_TEMPLATE_NS/${USER_NSCL}/g \
+                -e s/CAMB_TEMPLATE_N_NU_MASSIVE/${USER_N_NU_MASSIVE}/g \
+                -e s/CAMB_TEMPLATE_N_NU_MASSLESS/${DER_N_NU_MASSLESS}/g \
+                -e s/CAMB_TEMPLATE_MODELNAME/${USER_MODELNAME}/g \
+	> ${CAMB_INI_NAME}
+
+##### Run camb
+time ${USER_CAMB_EXEC}/camb ${CAMB_INI_NAME} > output_camb_${USER_MODELNAME}.ini
+
+##### Get A_s for desired sigma_8, in case we want to use Euclid Emulator 2
+#DER_SIG8_CAMB=$(grep "at z =  0.000 sigma8 (all matter)" output_camb_${USER_MODELNAME}.ini | sed -e s/^.*=//g -e s/^\ *//g)
+#DER_AS_EE2=$(echo "${DER_AS9_DEFAULT} * ${USER_SIG8}*${USER_SIG8} / (${DER_SIG8_CAMB}*${DER_SIG8_CAMB})" | bc -l)e-9
+#echo "Found scalar_amp = ${DER_AS_EE2}"
+
+##### Create hyphi parameters file
+HYPHI_PARAM_NAME=params_hyphi.dat
+
+echo "# hyphi parameter file generated on" $(date +'%Y-%m-%d at %H:%M') \
+		  >  ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# n_s"      >> ${HYPHI_PARAM_NAME}
+echo ${USER_NSCL} >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# sigma_8"  >> ${HYPHI_PARAM_NAME}
+echo ${USER_SIG8} >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# h"        >> ${HYPHI_PARAM_NAME}
+echo ${USER_HRED} >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# Omega_m"  >> ${HYPHI_PARAM_NAME}
+echo ${DER_OM}    >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# Omega_b"  >> ${HYPHI_PARAM_NAME}
+echo ${DER_OB}    >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# Omega_nu" >> ${HYPHI_PARAM_NAME}
+echo ${DER_ON}    >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# T_cmb_K"  >> ${HYPHI_PARAM_NAME}
+echo "2.7255"     >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# w_0"      >> ${HYPHI_PARAM_NAME}
+echo ${USER_DEW0} >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo "# w_a"      >> ${HYPHI_PARAM_NAME}
+echo ${USER_DEWA} >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+echo              >> ${HYPHI_PARAM_NAME}
+
+echo "# non-linearity"   >> ${HYPHI_PARAM_NAME}
+echo "1"                 >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# 1-loop TRG"      >> ${HYPHI_PARAM_NAME}
+echo "1"                 >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# print linear P"  >> ${HYPHI_PARAM_NAME}
+echo "0"                 >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# print RSD"       >> ${HYPHI_PARAM_NAME}
+echo "0"                 >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# initial z"       >> ${HYPHI_PARAM_NAME}
+echo "200"               >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# number of outputs" >> ${HYPHI_PARAM_NAME}
+echo ${DER_HYPHI_NZ}     >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# redshifts of outputs" >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_ZLIST} >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# transfer function file" >> ${HYPHI_PARAM_NAME}
+echo ${DER_TFILE}        >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# nu approx: only 0 supported" >> ${HYPHI_PARAM_NAME}
+echo "0"                 >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# transfer file root" >> ${HYPHI_PARAM_NAME}
+echo ${DER_TFILE_ROOT}   >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# number of interpolation redshifts" >> ${HYPHI_PARAM_NAME}
+echo "12"                >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo "# interpolation redshifts" >> ${HYPHI_PARAM_NAME}
+echo "200 100 50 20 10 5 4 3 2 1 0.5 0" >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+echo                     >> ${HYPHI_PARAM_NAME}
+
+echo "# number of lensing potential power spectra" >> ${HYPHI_PARAM_NAME}
+echo ${USER_NCLPP}          >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+echo "# P_m to use in lensing potential power integral" >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_NL}       >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+echo "# SP(k) hydrodynamic suppression option" >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_HYD}      >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+echo "# z above which to use Time-RG PT for P_m" >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_ZPT}      >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+echo "# min, max z for lensing potential power integ." >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_ZMIN}     >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_ZMAX}     >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+echo "# SP(k) hydro suppression parameters (3 each)" >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_HYD_PFTB} >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_HYD_QFTB} >> ${HYPHI_PARAM_NAME}
+echo ${USER_HYPHI_HYD_RFTB} >> ${HYPHI_PARAM_NAME}
+echo                        >> ${HYPHI_PARAM_NAME}
+
+##### Run hyphi.
+HYPHI_OUTPUT=hyphi_${USER_MODELNAME}.dat
+time ./hyphi > ${HYPHI_OUTPUT}

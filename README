@@ -1,0 +1,128 @@
+hyphi version 1.0
+================================================================================
+
+Installation:
+
+hyphi relies on the GNU Scientific Library (GSL), available at 
+https://www.gnu.org/software/gsl/ .  Once this has been installed, edit the 
+PATHS variable in Makefile to include the locations of the GSL headers and 
+libraries.  Then compile hyphi using "make" from the command prompt.
+
+Parallelization in hyphi uses OpenMP.  The code may be compiled without 
+parallelization by deleting the "-fopenmp" flag in the Makefile.
+
+hyphi can use the Mira-Titan IV emulator of Moran et al., MNRAS 520:3443 (2023),
+e-Print arXiv:2207.12345 , available online at github.com/lanl/CosmicEmu .  
+Its location should be symlinked to the working directory.
+
+--------------------------------------------------------------------------------
+
+Running:
+
+hyphi is run directly from the command prompt with no arguments.  It requires:
+
+  1.  a file params_hyphi.dat listing the cosmological parameters and 
+      code inputs, as detailed in the comments to the sample 
+      params_hyphi.dat file included; 
+
+  2.  transfer function files at the redshifts specified by the user in 
+      params_hyphi.dat, in the standard 13-column format produced by the CAMB 
+      code (https://camb.info), and named as specified in params_hyphi.dat; and
+
+  3.  a copy of (or symlink to) the Mita-Titan IV emulator of Moran, et al. 
+      (2023) [https://arxiv.org/abs/2207.12345], in the working directory.
+
+Since the bulk of the computational cost is due to the Time-RG perturbation 
+theory describing the non-linear clustering of the cold dark matter and baryons,
+hyphi can compute multiple lensing potential power spectra in parallel for very
+little additional cost.  We have tested this by computing 1000 lensing potential
+power spectra at once, with only a modest 40% increase in running time.
+
+A sample params_hyphi.dat and the corresponding CAMB transfer function files
+are included with the code.  Also included is the shell script runAll, which
+symlinks the Mira-Titan IV emulator for use with hyphi, runs CAMB with user-
+specified parameters, and calls hyphi using the CAMB transfer files.
+
+--------------------------------------------------------------------------------
+
+Hydrodynamic effects:
+
+Modeling of the baryonic suppression of matter clustering uses my C++
+implementation of the SP(k) fitting function of Salcido, et al., MNRAS 523:2247
+(2023) [https://arxiv.org/abs/2305.09710], and available online at 
+https://github.com/jemme07/pyspk .  SP(k) models a correction factor for
+baryonic effects using the relative baryon fraction as a function of halo mass
+and redshift, which must be provided as an input.  Three options are 
+implemented in hyphi:
+
+  0.  no hydrodynamic suppression;
+
+  1.  the baryon fraction measured from the BAHAMAS simulations of McCarthy,
+      et al., MNRAS 465:2936 (2017) and MNRAS 476:2999 (2018) 
+      [https://arxiv.org/abs/1603.02702 and https://arxiv.org/abs/1712.02411],
+      raised to a power p_f chosen by the user in params_hyphi.dat, and then
+      fed to SP(k); and
+
+  2.  a variant of the three-parameter baryon fraction of Akino, et al., 
+      PASJ 74:175 (2022) [https://arxiv.org/abs/2111.10080], as implemented in
+      SP(k), with the three parameters supplied by the user in params_hyphi.dat.
+
+Note that when calculating multiple lensing potential power spectra at once, 
+three parameters must be supplied for each spectrum.  All three are neglected
+as dummy parameters if option 0 above is chosen, and the final two are neglected
+if option 1 is chosen.
+
+--------------------------------------------------------------------------------
+
+Outputs:
+
+hyphi prints the CMB lensing potential power spectra requested by the user
+in params_hyphi.dat as separate columns at each requested output redshift.  
+Legendre moment values L are approximately logarithmically spaced, but with
+the restriction that they be integers.  By default, 128 L values are output,
+ranging from 1 to 25000.  The number and maximum can be changed by modifying
+nk and ellkapmax, respectively, in hyphi.cc. 
+
+--------------------------------------------------------------------------------
+
+Compile-time options:
+
+* eabs_P and erel_P
+Absolute and relative error tolerances for power spectrum integration, eabs_P
+and erel_P, are set in hyphi.cc and may be modified at compile time.  Currently
+they are set to 1e-15 and 1e-06, respectively, for a running time on a standard
+desktop machine of about 2 seconds.
+
+* PRINTPMAT
+Matter power spectra over nk logarithmically-spaced k values may be printed 
+after the lensing potential power spectrum by setting PRINTPMAT=1 in hyphi.cc.
+
+* SWITCH_TRANSFER_TYPE
+hyphi can accept old-format 7-column CAMB transfer functions by setting
+SWITCH_TRANSFER_TYPE=1 in AU_cosmological_parameters.h.  This setting also
+accepts CLASS transfer functions with the format=camb option.
+
+--------------------------------------------------------------------------------
+
+Examples:
+
+Three example calculations for a Planck-like model with three equal-mass 
+neutrinos of total mass M_nu = 0.24 eV are provided in the examples directory:
+
+* TRG: Time-RG perturbation theory is used to compute CDM and baryon clustering
+    at all redshifts.  CAMB transfer function files have also been provided,
+    so that hyphi can simply be run from the command line: ./hyphi
+
+* MT4+TRG: hyphi switches from Time-RG clustering at redshifts z>2 to the Mira-
+    Titan emulator at lower redshifts for greater accuracy.
+
+* MT4+TRG+SP(k): Each of the three hydrodynamic options above is tested 
+    simultaneously, with the fiducial BAHAMAS baryon fraction and the mean
+    model of Akino shown to agree to <1.3% to L=10000.  This example also
+    demonstrates the computation of multiple lensing potential power spectra
+    at once, in parallel.  
+
+CAMB transfer files are the same in all three examples and may be copied from 
+the TRG directory to the other two.  In each case, the hyphi output is saved as
+hyphi_planckLargeNuFix.dat. 
+
