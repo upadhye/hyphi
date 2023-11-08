@@ -126,3 +126,24 @@ CAMB transfer files are the same in all three examples and may be copied from
 the TRG directory to the other two.  In each case, the hyphi output is saved as
 hyphi_planckLargeNuFix.dat. 
 
+--------------------------------------------------------------------------------
+
+Citation:
+
+If you use hyphi, please cite our paper:
+
+Upadhye, et al., "Non-linear CMB lensing with neutrinos and baryons: FLAMINGO 
+simulations vs. fast approximations," e-Print: arXiv:2308.09755 (2023)
+
+bibtex format:
+
+@article{Upadhye:2023zgr,
+    author = "Upadhye, Amol and others",
+    title = "{Non-linear CMB lensing with neutrinos and baryons: FLAMINGO simulations vs. fast approximations}",
+    eprint = "2308.09755",
+    archivePrefix = "arXiv",
+    primaryClass = "astro-ph.CO",
+    month = "8",
+    year = "2023"
+}
+
